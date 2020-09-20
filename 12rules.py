@@ -23,10 +23,13 @@ from mtranslate import translate
 import tqdm
 import random
 import time
+import pickle
 import re
 
 
 debug = 0
+to_txt = True
+load_translation = True
 filename = '12 regole per la vita'
 title = '12 regole per la vita'
 author = 'Jordan Peterson'
@@ -87,20 +90,33 @@ pd.Series([len(c) for c in chunks]).plot.hist(bins = 200,
                                               title = 'Chunk length')   
 plt.show()
 
-translations = defaultdict(str)
+filename = 'translations_%s.pickle' % title.replace(' ', '_')
+if load_translation:
+    with open(filename, 'rb') as handle:
+        translations = pickle.load(handle)
+    print("Read %s" % filename)
+else:
+    translations = defaultdict(str)
+    
+    print("Translating %d..." % len(chunks))
+    for i, t in tqdm.tqdm(enumerate(chunks),
+                          desc = 'Translating',
+                          total = len(chunks)):
+        if i in translations:
+            continue
+        demojized_token = demojize(t)
+        translation = translate(demojized_token, target_lang)
+    
+        translations[i] = translation#.text
+        secs = random.random() * 8
+        time.sleep(secs)
 
-print("Translating %d..." % len(chunks))
-for i, t in tqdm.tqdm(enumerate(chunks),
-                      desc = 'Translating',
-                      total = len(chunks)):
-    if i in translations:
-        continue
-    demojized_token = demojize(t)
-    translation = translate(demojized_token, target_lang)
+    with open(filename, 'wb') as handle:
+        pickle.dump(translations, handle)
+    print("Saved %s" % filename)
 
-    translations[i] = translation#.text
-    secs = random.random() * 8
-    time.sleep(secs)
+
+
 
 srcs = []
 targets = []
@@ -128,26 +144,48 @@ targets = [t.replace(' #', '').replace('# ', '').strip()\
            for t in tqdm.tqdm(targets)]
 
 
-
-print("Generating latex code...")
-def text_to_latex(text):
-    code = unicode_to_latex(text)
-    #code = '*UnicodeEncodeError*'
-    return code
-result = latex_templates.get_latex_start(title = title,
-                                         author = author)
-result += text_to_latex(srcs[0]) + '\n\\switchcolumn\n' + text_to_latex(targets[0])
-
-
-for i in range(1, min(len(srcs), len(targets))):
-    if i > 4000:
-        break
-    src_t = text_to_latex(srcs[i])
-    targt_t = text_to_latex(targets[i])
-    result += '\n\\switchcolumn*\n' + src_t + '\n\\switchcolumn\n' + targt_t
+if to_txt:
+    print('Generating txt...')
+    result = []
+    for src, target in zip(srcs, targets):
+        result.append('$ %s' % src)
+        result.append('_ %s' % target)
     
-result += latex_templates.get_latex_end()
-filepath = os.path.join(r'C:\Users\gcvic\Documents\bilingual-document-generator\code.txt')
+    result = '\n\n'.join(result)
+    # result = """
+    # <!DOCTYPE html>
+    # <html>
+    #     <head>
+    #         %s
+    #         <br>
+    #         %s
+    #     </head>
+    #     <body>
+    #         %s
+    #     </body>
+    # </html>
+    # """ % (title, author, result)
+else:
+    print("Generating latex code...")
+    def text_to_latex(text):
+        code = unicode_to_latex(text)
+        #code = '*UnicodeEncodeError*'
+        return code
+    result = latex_templates.get_latex_start(title = title,
+                                             author = author)
+    result += text_to_latex(srcs[0]) + '\n\\switchcolumn\n' + text_to_latex(targets[0])
+    
+    
+    for i in range(1, min(len(srcs), len(targets))):
+        if i > 4000:
+            break
+        src_t = text_to_latex(srcs[i])
+        targt_t = text_to_latex(targets[i])
+        result += '\n\\switchcolumn*\n' + src_t + '\n\\switchcolumn\n' + targt_t
+        
+    result += latex_templates.get_latex_end()
+name = '%s.txt' % title.replace(' ', '_')
+filepath = os.path.join(r'C:\Users\gcvic\Documents\bilingual-document-generator\%s' % name)
 with open(filepath, 'w', encoding='utf8') as fp:
     fp.write(result)
 print("Goed gedaan!", filepath)
