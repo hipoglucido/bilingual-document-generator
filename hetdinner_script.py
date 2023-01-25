@@ -29,7 +29,7 @@ import re
 debug = 0
 to_txt = True
 load_translation = False
-filename = 'Het_diner'
+filename = 'Het_dine_smallr'
 title = 'Het Diner'
 source_lang = 'nl'
 target_lang = 'en'
@@ -95,7 +95,7 @@ i=0
 
 def clean(tokens, sep):
     ts = []
-    MAX_SENTENCE_LEN = 150
+    MAX_SENTENCE_LEN = 80
     for t in tokens:
         if len(t) <= MAX_SENTENCE_LEN or sep not in t:
             ts.append(t)
@@ -173,8 +173,10 @@ for i, ts in tqdm.tqdm(enumerate(chunks),
                       desc = 'Translating',
                       total = len(chunks)):
    
-    if i < 979:
-        pass
+    if i < 213:
+        continue
+    if len(ts) == 0:
+        continue
     while 1:
         sep = '\n'+str(random.randint(10000, 99999)) + '\n'
         t = sep.join(ts)
@@ -225,12 +227,11 @@ def lreplace(pattern, sub, string):
 def rreplace(pattern, sub, string):
     return re.sub('%s$' % pattern, sub, string)
 print('Replacing artifacts...')
-targets = [t.replace(' #', '').replace('# ', '').strip()\
-           for t in tqdm.tqdm(targets)]
 
 flatten = lambda t: [item for sublist in t for item in sublist]
 srcs = flatten(srcs)
 targets = flatten(targets)
+targets = [t.replace(' #', '').replace('# ', '').strip() for t in tqdm.tqdm(targets)]
 
 print('Generating txt...')
 result = []

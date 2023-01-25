@@ -5,9 +5,6 @@ Created on Tue Jul 14 19:17:49 2020
 @author: gcvic
 """
 
-
-
-
 from tika import parser
 from pylatexenc.latexencode import unicode_to_latex
 import pandas as pd
@@ -26,17 +23,15 @@ import time
 import pickle
 import re
 
-
 debug = 0
 to_txt = True
-load_translation = True
+load_translation = False
 filename = '12 regole per la vita'
 title = '12 regole per la vita'
 author = 'Jordan Peterson'
 source_lang = 'it'
 target_lang = 'es'
 tokenizer_lang = 'italian'
-
 
 
 random.seed(7)
@@ -56,7 +51,11 @@ print("%d characters read" % len(raw))
 tokenizer_path = 'tokenizers/punkt/%s.pickle' % tokenizer_lang
 print('Tokenizing with %s...' % tokenizer_path)
 tokenizer = nltk.data.load(tokenizer_path)
-tokens = tokenizer.tokenize(raw)
+prep = raw
+prep = prep.replace('.', '. ')
+prep = prep.replace('. . . ', '... ')
+prep = prep.replace('?', '? ')
+tokens = tokenizer.tokenize(prep)
 if debug:
     print("Sampling tokens...")
     time.sleep(.5)
@@ -64,12 +63,15 @@ if debug:
     tokens = random.sample(tokens, size)
 def parse_token(t):
     t = re.sub(r'\.{3,}', "...", t)
+    
     return t
 print("Parsing %d tokens..." % len(tokens))
 tokens = [parse_token(t) for t in tqdm.tqdm(tokens)]
+
 print('PLotting...')
 plt.figure()
-pd.Series([len(t) for t in tokens]).plot.hist(bins = 200, title = 'Token length')
+pd.Series([len(t) for t in tokens]).plot.hist(bins = 200,
+                                              title = 'Token length')
 plt.show()
 sep = ' #TOKEN# '
 
@@ -84,7 +86,9 @@ for token in tqdm.tqdm(tokens, desc = 'Creating chunks'):
             chunks.append(sep.join(chunk))
         chunk = []
 chunks.append(sep.join(chunk))
+
 print('Plotting')
+
 plt.figure()
 pd.Series([len(c) for c in chunks]).plot.hist(bins = 200,
                                               title = 'Chunk length')   
@@ -97,7 +101,7 @@ if load_translation:
     print("Read %s" % filename)
 else:
     translations = defaultdict(str)
-    
+
     print("Translating %d..." % len(chunks))
     for i, t in tqdm.tqdm(enumerate(chunks),
                           desc = 'Translating',

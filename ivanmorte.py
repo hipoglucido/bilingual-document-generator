@@ -36,7 +36,6 @@ target_lang = 'es'
 tokenizer_lang = 'italian'
 
 print("Reading text from %s..." % pdf_path)
-   
 raw = parser.from_file(pdf_path)
 raw = raw['content']#.encode('utf-8', errors='ignore')
 raw = str(raw).replace("\n", "").replace("\\", "")
@@ -44,11 +43,7 @@ print("%d characters read" % len(raw))
 
 # AD-hoc transformation
 # raw = raw.replace('[', '').replace(']', '')
-# caps = ['Capitolo %s' % s for s in ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']]
-# for cap in caps:
-#     assert cap in raw
-#     s = '\n%s\n' % cap
-#     raw = raw.replace(cap, s, 1)
+raw = raw[raw.index('scritta nel 1886')-38:]
 
 
 tokenizer_path = 'tokenizers/punkt/%s.pickle' % tokenizer_lang
@@ -58,7 +53,7 @@ tokens = tokenizer.tokenize(raw)
 if debug:
     print("Sampling tokens...")
     time.sleep(.5)
-    tokens = random.sample(tokens, 500)
+    tokens = tokens[:100]#random.sample(tokens, 500)
 def parse_token(t):
     t = re.sub(r'\.{3,}', "...", t)
     return t
@@ -83,13 +78,15 @@ for token in tqdm.tqdm(tokens, desc = 'Creating chunks'):
 chunks.append(sep.join(chunk))
 print('Plotting')
 plt.figure()
-pd.Series([len(c) for c in chunks]).plot.hist(bins = 200, title = 'Chunk length')   
+pd.Series([len(c) for c in chunks]).plot.hist(bins = 200,
+                                              title = 'Chunk length')   
 plt.show()
 
 translations = defaultdict(str)
 
 print("Translating %d..." % len(chunks))
-for i, t in tqdm.tqdm(enumerate(chunks), desc = 'Translating sentences',
+for i, t in tqdm.tqdm(enumerate(chunks),
+                      desc = 'Translating',
                       total = len(chunks)):
     if i in translations:
         continue
@@ -103,7 +100,8 @@ for i, t in tqdm.tqdm(enumerate(chunks), desc = 'Translating sentences',
 srcs = []
 targets = []
 sep_t = 'TOKEN' #regexPattern = '|'.join(['-_._-'])
-for i in tqdm.tqdm(range(len(chunks)), desc = 'Creating columns...'):
+for i in tqdm.tqdm(range(len(chunks)),
+                   desc = 'Creating columns...'):
     src = chunks[i].split(sep)
     target = translations[i].split(sep_t)
     
@@ -116,25 +114,14 @@ for i in tqdm.tqdm(range(len(chunks)), desc = 'Creating columns...'):
     targets += target
 assert len(srcs) == len(targets)
 def lreplace(pattern, sub, string):
-    """
-    Replaces 'pattern' in 'string' with 'sub' if 'pattern' starts 'string'.
-    """
     return re.sub('^%s' % pattern, sub, string)
 
 def rreplace(pattern, sub, string):
-    """
-    Replaces 'pattern' in 'string' with 'sub' if 'pattern' ends 'string'.
-    """
     return re.sub('%s$' % pattern, sub, string)
 print('Replacing artifacts...')
-targets = [t.replace(' #', '').replace('# ', '').strip() for t in tqdm.tqdm(targets)]
+targets = [t.replace(' #', '').replace('# ', '').strip()\
+           for t in tqdm.tqdm(targets)]
 
-# for j in range(1000):
-#     print('_________________________')
-#     print(src[j])
-#     print(target[j])
-#     if '#' in target[j]:
-#         break
 
 
 print("Generating latex code...")

@@ -30,3 +30,17 @@ def get_latex_end():
     \end{document}
     '''
     return latex_end
+
+    # result = """
+    # <!DOCTYPE html>
+    # <html>
+    #     <head>
+    #         %s
+    #         <br>
+    #         %s
+    #     </head>
+    #     <body>
+    #         %s
+    #     </body>
+    # </html>
+    # """ % (title, author, result)
